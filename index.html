@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICDO-4 更新搜尋系統</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Inter', Arial, "Microsoft JhengHei", sans-serif;
+            background: linear-gradient(135deg, #0f172a, #1e3a8a);
+            color: #fff;
+            min-height: 100vh;
+            padding: 40px 20px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 30px;
+            padding: 40px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            box-sizing: border-box;
+        }
+
+        /* 標題與頁籤設計 */
+        h1 {
+            font-size: 2.5rem;
+            margin-top: 0;
+            margin-bottom: 30px;
+            background: linear-gradient(to right, #60a5fa, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(to right, #3b82f6, #10b981);
+            border-color: transparent;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        /* 面板隱藏與顯示 */
+        .panel {
+            display: none;
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            font-size: 1.6rem;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #e2e8f0;
+        }
+
+        .status-message {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .search-box {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        input {
+            padding: 14px 20px;
+            width: 320px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        input::placeholder {
+            color: rgba(255,255,255,0.4);
+        }
+
+        input:focus {
+            background: rgba(255,255,255,0.15);
+            border-color: #60a5fa;
+            box-shadow: 0 0 15px rgba(96, 165, 250, 0.3);
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(15, 23, 42, 0.4);
+            text-align: left;
+            font-size: 0.95rem;
+            table-layout: fixed;
+        }
+
+        th, td {
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            word-break: break-word;
+        }
+
+        th {
+            background-color: rgba(30, 41, 59, 0.85);
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .code-badge {
+            color: #34d399;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            background: rgba(52, 211, 153, 0.1);
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(52, 211, 153, 0.2);
+            display: inline-block;
+        }
+
+        .ref-text { color: #94a3b8; }
+        .no-result { text-align: center; color: #f87171; padding: 40px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>ICDO-4 更新</h1>
+        
+        <!-- 第一層：頁籤切換 -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('morphology')">組織型態</button>
+            <button class="tab-btn" onclick="switchTab('topography')">原發部位</button>
+        </div>
+
+        <!-- 第二層：組織型態 面板 -->
+        <div id="morphology-panel" class="panel active">
+            <h2>組織型態搜尋工具</h2>
+            <div id="morphStatus" class="status-message">⏳ 正在載入組織型態資料...</div>
+            <div class="search-box">
+                <input type="text" id="morphTermSearch" placeholder="組織型態/Mcode (例:Carcinoma 或 80100).." autocomplete="off">
+                <input type="text" id="morphRefSearch" placeholder="參考部位 (例: C22.0)..." autocomplete="off">
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 25%;">ICD_O4 (M-Code)</th>
+                            <th style="width: 50%;">組織型態 (Term)</th>
+                            <th style="width: 25%;">適用部位 (Code reference)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="morphBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 第二層：原發部位 面板 -->
+        <div id="topography-panel" class="panel">
+            <h2>原發部位搜尋工具</h2>
+            <div id="topoStatus" class="status-message">⏳ 正在載入原發部位資料...</div>
+            <div class="search-box">
+                <input type="text" id="topoSearch" placeholder="部位碼/部位名稱 (例: C00 或 唇)..." autocomplete="off">
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 30%;">部位碼 (Topography Code)</th>
+                            <th style="width: 70%;">部位名稱 (Term / Description)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topoBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>   
+
+<!-- 載入資料檔 -->
+<script src="morphology.js" onerror="handleError('morphStatus', 'morphology.js')"></script>
+<script src="topography.js" onerror="handleError('topoStatus', 'topography.js')"></script>
+
+<script>
+    // --- 頁籤切換邏輯 ---
+    function switchTab(tabId) {
+        // 更新按鈕狀態
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        // 更新面板顯示狀態
+        document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active'));
+        document.getElementById(`${tabId}-panel`).classList.add('active');
+    }
+
+    // --- 錯誤處理 ---
+    function handleError(statusId, fileName) {
+        const el = document.getElementById(statusId);
+        if(el) {
+            el.innerHTML = `❌ <strong style="color:#f87171;">無法讀取 ${fileName}</strong>，請確認檔案是否存在。`;
+        }
+    }
+
+    // --- 防抖函數 (效能優化) ---
+    function debounce(func, delay = 100) {
+        let timer;
+        return function(...args) {
+            clearTimeout(timer);
+            timer = setTimeout(() => func.apply(this, args), delay);
+        };
+    }
+
+    // ==========================================
+    // 組織型態 (Morphology) 邏輯
+    // ==========================================
+    let morphologyData = [];
+    
+    function initMorphology() {
+        const statusMsg = document.getElementById('morphStatus');
+        if (typeof externalData !== 'undefined' && Array.isArray(externalData.morphology)) {
+            morphologyData = externalData.morphology;
+        } else if (typeof morphology !== 'undefined' && Array.isArray(morphology)) {
+            morphologyData = morphology;
+        }
+
+        if (morphologyData.length > 0) {
+            statusMsg.innerHTML = `✅ 成功載入 <strong style="color:#34d399;">${morphologyData.length}</strong> 筆組織型態資料`;
+            statusMsg.style.color = '#34d399';
+            renderMorphology();
+        } else {
+            statusMsg.innerHTML = '⚠️ <strong style="color:#fbbf24;">未找到有效的 Morphology 資料陣列</strong>';
+            statusMsg.style.color = '#fbbf24';
+        }
+    }
+
+    function renderMorphology() {
+        const body = document.getElementById('morphBody');
+        if (!body) return;
+        
+        const termInput = document.getElementById('morphTermSearch').value.toLowerCase().trim();
+        const refInput = document.getElementById('morphRefSearch').value.toLowerCase().trim();
+
+        const filteredData = morphologyData.filter(item => {
+            const itemTerm = String(item.Term || item.term || "").toLowerCase();
+            const itemIcd = String(item["M-code"] || item.ICD_O4 || "").toLowerCase();
+            const itemCodeRef = String(item.Code_reference || item["Code reference"] || "").toLowerCase();
+
+            const matchTermOrIcd = termInput === "" || itemTerm.includes(termInput) || itemIcd.includes(termInput);
+            const matchRef = refInput === "" || itemCodeRef.includes(refInput);
+            return matchTermOrIcd && matchRef;
+        });
+
+        if (filteredData.length === 0) {
+            body.innerHTML = `<tr><td colspan="3" class="no-result">❌ 未找到相符的資料 (總筆數: ${morphologyData.length})</td></tr>`;
+            return;
+        }
+
+        const displayData = (termInput === "" && refInput === "") ? filteredData.slice(0, 100) : filteredData;
+
+        body.innerHTML = displayData.map(item => {
+            const icdCode = item["M-code"] || item.ICD_O4 || '-';
+            const termText = item.Term || item.term || '-';
+            const codeRefValue = item.Code_reference || item["Code reference"];
+            const refDisplay = codeRefValue ? codeRefValue : '<span style="color:rgba(255,255,255,0.3); font-style:italic;">-</span>';
+            return `<tr>
+                <td><span class="code-badge">${icdCode}</span></td>
+                <td>${termText}</td>
+                <td><span class="ref-text">${refDisplay}</span></td>
+            </tr>`;
+        }).join('');
+    }
+
+    // ==========================================
+    // 原發部位 (Topography) 邏輯
+    // ==========================================
+    let topographyData = [];
+
+    function initTopography() {
+        const statusMsg = document.getElementById('topoStatus');
+        
+        // 智慧讀取 Topography 資料 (支援多種變數命名)
+        if (typeof externalData !== 'undefined' && Array.isArray(externalData.topography)) {
+            topographyData = externalData.topography;
+        } else if (typeof topography !== 'undefined' && Array.isArray(topography)) {
+            topographyData = topography;
+        }
+
+        if (topographyData.length > 0) {
+            statusMsg.innerHTML = `✅ 成功載入 <strong style="color:#34d399;">${topographyData.length}</strong> 筆原發部位資料`;
+            statusMsg.style.color = '#34d399';
+            renderTopography();
+        } else {
+            statusMsg.innerHTML = '⚠️ <strong style="color:#fbbf24;">未找到有效的 Topography 資料陣列</strong>';
+            statusMsg.style.color = '#fbbf24';
+        }
+    }
+
+    function renderTopography() {
+        const body = document.getElementById('topoBody');
+        if (!body) return;
+        
+        const searchInput = document.getElementById('topoSearch').value.toLowerCase().trim();
+
+        const filteredData = topographyData.filter(item => {
+            // 兼容多種 JSON key，例如 T-code, Code, Term, Description 等
+            const itemCode = String(item["T-code"] || item.Code || item.code || "").toLowerCase();
+            const itemTerm = String(item.Term || item.term || item.Description || "").toLowerCase();
+
+            return searchInput === "" || itemCode.includes(searchInput) || itemTerm.includes(searchInput);
+        });
+
+        if (filteredData.length === 0) {
+            body.innerHTML = `<tr><td colspan="2" class="no-result">❌ 未找到相符的部位資料 (總筆數: ${topographyData.length})</td></tr>`;
+            return;
+        }
+
+        const displayData = searchInput === "" ? filteredData.slice(0, 100) : filteredData;
+
+        body.innerHTML = displayData.map(item => {
+            const tCode = item["T-code"] || item.Code || item.code || '-';
+            const tTerm = item.Term || item.term || item.Description || '-';
+            return `<tr>
+                <td><span class="code-badge" style="color:#60a5fa; border-color:rgba(96, 165, 250, 0.2); background:rgba(96, 165, 250, 0.1);">${tCode}</span></td>
+                <td>${tTerm}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    // ==========================================
+    // 綁定事件與初始化
+    // ==========================================
+    window.onload = () => {
+        initMorphology();
+        initTopography();
+    };
+
+    const optimizedMorphRender = debounce(renderMorphology, 100);
+    document.getElementById('morphTermSearch').addEventListener('input', optimizedMorphRender);
+    document.getElementById('morphRefSearch').addEventListener('input', optimizedMorphRender);
+
+    const optimizedTopoRender = debounce(renderTopography, 100);
+    document.getElementById('topoSearch').addEventListener('input', optimizedTopoRender);
+
+</script>
+</body>
+</html>
